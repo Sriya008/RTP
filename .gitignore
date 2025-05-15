@@ -1,0 +1,32 @@
+
+# — Python byte‑code caches —
+__pycache__/
+*.py[cod]
+*$py.class
+
+# — Virtual environments —
+venv/
+testvenv/
+
+# — IDE/workspace files —
+.vscode/
+*.code-workspace
+
+# — Large media & data files —
+*.mp4
+*.wav
+*.zip
+
+# — Pretrained models & generated assets —
+vosk-model-en-us-0.22/
+indicTrans-main/
+aksharamukha-python/
+
+# — (Optional) other folders you don’t need in Git —
+frames/
+faces/
+uploads/
+uploads_test/
+subtitles/
+subtitles_test/
+

@@ -1,0 +1,973 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Video Transliteration Tool</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+    <!-- Add Plyr for a better video player with improved subtitle display -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/plyr/3.7.8/plyr.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+        
+        html {
+            scroll-behavior: smooth;
+        }
+        
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #f8f9fa;
+        }
+        
+        .landing-section {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(135deg, #6366F1 0%, #4F46E5 100%);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .scroll-indicator {
+            position: absolute;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            animation: bounce 2s infinite;
+            cursor: pointer;
+        }
+        
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% {
+                transform: translateY(0) translateX(-50%);
+            }
+            40% {
+                transform: translateY(-20px) translateX(-50%);
+            }
+            60% {
+                transform: translateY(-10px) translateX(-50%);
+            }
+        }
+        
+        .translation-container {
+            position: relative;
+            background-color: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+            width: 90%;
+            max-width: 600px;
+            text-align: center;
+            z-index: 2;
+        }
+        
+        .translation-box-title {
+            margin-bottom: 30px;
+            color: #4F46E5;
+            font-weight: 700;
+            font-size: 28px;
+        }
+        
+        .translation-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            padding: 15px;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+            background-color: #F9FAFB;
+        }
+        
+        .translation-row:hover {
+            background-color: #F3F4F6;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.05);
+        }
+        
+        .english-text {
+            font-size: 20px;
+            font-weight: 500;
+            color: #1F2937;
+            width: 30%;
+            text-align: left;
+        }
+        
+        .arrow {
+            font-size: 22px;
+            color: #6366F1;
+            width: 10%;
+        }
+        
+        .regional-text {
+            font-size: 24px;
+            width: 50%;
+            text-align: right;
+            color: #4F46E5;
+            font-weight: 500;
+        }
+        
+        .drop-zone {
+            border: 2px dashed #ccc;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+        
+        .drop-zone:hover, .drop-zone.dragover {
+            background-color: #f3f4f6;
+            border-color: #6366f1;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            background-color: #e2e8f0;
+            border-radius: 9999px;
+            height: 8px;
+            overflow: hidden;
+        }
+        
+        .progress-bar-fill {
+            height: 100%;
+            background-color: #6366f1;
+            border-radius: 9999px;
+            transition: width 0.3s ease;
+        }
+        
+        .language-btn {
+            transition: all 0.2s ease;
+        }
+        
+        .language-btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .language-btn.selected {
+            background-color: #6366f1;
+            color: white;
+            border-color: #6366f1;
+        }
+        
+        .video-container {
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        /* For language selection dropdown */
+        .language-dropdown {
+            position: relative;
+        }
+        
+        .dropdown-menu {
+            max-height: 250px;
+            overflow-y: auto;
+            z-index: 10;
+        }
+        
+        /* Custom subtitle area */
+        .subtitle-container {
+            height: 100px;
+            overflow-y: auto;
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 10px;
+            border-bottom-left-radius: 8px;
+            border-bottom-right-radius: 8px;
+            text-align: center;
+            font-size: 18px;
+            font-weight: 500;
+            scrollbar-width: thin;
+            scrollbar-color: #6366f1 rgba(0, 0, 0, 0.1);
+        }
+        
+        .subtitle-container::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        .subtitle-container::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.1);
+        }
+        
+        .subtitle-container::-webkit-scrollbar-thumb {
+            background-color: #6366f1;
+            border-radius: 20px;
+        }
+        
+        .subtitle-entry {
+            margin-bottom: 8px;
+            transition: all 0.3s ease;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+        
+        .subtitle-entry.active {
+            background-color: rgba(99, 102, 241, 0.5);
+            font-weight: 600;
+        }
+        
+        /* Loading animation */
+        .loading-spinner {
+            border: 5px solid rgba(99, 102, 241, 0.2);
+            border-radius: 50%;
+            border-top: 5px solid #6366f1;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Toast notification */
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            z-index: 50;
+            transition: all 0.3s ease;
+            max-width: 350px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .toast-success {
+            background-color: #10b981;
+            color: white;
+        }
+        
+        .toast-error {
+            background-color: #ef4444;
+            color: white;
+        }
+        
+        /* Background circles/blobs for landing section */
+        .bg-circle {
+            position: absolute;
+            border-radius: 50%;
+            opacity: 0.1;
+            background-color: white;
+            z-index: 1;
+        }
+        
+        .bg-circle-1 {
+            width: 400px;
+            height: 400px;
+            top: -100px;
+            right: -100px;
+        }
+        
+        .bg-circle-2 {
+            width: 300px;
+            height: 300px;
+            bottom: -50px;
+            left: -50px;
+        }
+        
+        .bg-circle-3 {
+            width: 200px;
+            height: 200px;
+            top: 40%;
+            left: 20%;
+        }
+        
+        /* Language badges */
+        .language-badge {
+            display: inline-block;
+            padding: 8px 16px;
+            margin: 5px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 500;
+            color: white;
+            background-color: #6366F1;
+            transition: all 0.3s ease;
+        }
+        
+        .language-badge:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .tagline {
+            color: white;
+            font-size: 18px;
+            font-weight: 300;
+            margin-top: 10px;
+            margin-bottom: 30px;
+            text-align: center;
+            max-width: 600px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Toast notifications container -->
+    <div id="toastContainer"></div>
+    
+    <!-- Landing Section with Translation Showcase -->
+    <section id="landing" class="landing-section">
+        <!-- Background decorative elements -->
+        <div class="bg-circle bg-circle-1"></div>
+        <div class="bg-circle bg-circle-2"></div>
+        <div class="bg-circle bg-circle-3"></div>
+        
+        <h1 class="text-4xl md:text-5xl font-bold text-white mb-4 text-center">AI Video Transliteration</h1>
+        <p class="tagline">Bridging linguistic barriers through AI-powered transliteration for Indian languages</p>
+        
+        <div class="translation-container">
+            <h2 class="translation-box-title">Experience Natural Language Transliteration</h2>
+            
+            <div class="translation-row">
+                <div class="english-text">Hello</div>
+                <div class="arrow"><i class="fas fa-long-arrow-alt-right"></i></div>
+                <div class="regional-text">नमस्ते</div>
+            </div>
+            <div class="translation-row">
+                <div class="english-text">Good Morning</div>
+                <div class="arrow"><i class="fas fa-long-arrow-alt-right"></i></div>
+                <div class="regional-text">సుప్రభాతం</div>
+            </div>
+            <div class="translation-row">
+                <div class="english-text">Thank You</div>
+                <div class="arrow"><i class="fas fa-long-arrow-alt-right"></i></div>
+                <div class="regional-text">நன்றி</div>
+            </div>
+            <div class="translation-row">
+                <div class="english-text">Welcome</div>
+                <div class="arrow"><i class="fas fa-long-arrow-alt-right"></i></div>
+                <div class="regional-text">സ്വാഗതം</div>
+            </div>
+            <div class="translation-row">
+                <div class="english-text">How are you?</div>
+                <div class="arrow"><i class="fas fa-long-arrow-alt-right"></i></div>
+                <div class="regional-text">ನೀವು ಹೇಗಿದ್ದೀರಿ?</div>
+            </div>
+            
+            <div class="mt-8">
+                <div class="flex flex-wrap justify-center gap-2">
+                    <span class="language-badge">Hindi</span>
+                    <span class="language-badge">Tamil</span>
+                    <span class="language-badge">Telugu</span>
+                    <span class="language-badge">Malayalam</span>
+                    <span class="language-badge">Kannada</span>
+                    <span class="language-badge">Bengali</span>
+                    <span class="language-badge">+ 5 more</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Scroll down indicator -->
+        <div class="scroll-indicator text-white text-center" onclick="scrollToMain()">
+            <p class="mb-2 text-sm font-medium">Upload your video</p>
+            <i class="fas fa-chevron-down text-xl"></i>
+        </div>
+    </section>
+
+    <div class="min-h-screen flex flex-col">
+        <!-- Header -->
+        <header id="main" class="bg-white shadow-sm">
+            <div class="container mx-auto px-4 py-4">
+                <h1 class="text-2xl md:text-3xl font-bold text-gray-800 flex items-center">
+                    <i class="fas fa-language text-indigo-600 mr-3"></i>
+                    AI Video Transliteration Tool
+                </h1>
+                <p class="text-gray-600 mt-1">Convert English videos to Indian regional languages</p>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="flex-grow container mx-auto px-4 py-8">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <!-- Upload Section -->
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h2 class="text-xl font-semibold text-gray-800 mb-4">Upload Your Video</h2>
+                    
+                    <!-- Upload Form -->
+                    <form id="uploadForm" class="space-y-6">
+                        <!-- File Drop Zone -->
+                        <div id="dropZone" class="drop-zone flex flex-col items-center justify-center p-8 cursor-pointer">
+                            <i class="fas fa-cloud-upload-alt text-4xl text-indigo-500 mb-3"></i>
+                            <p class="text-gray-700 font-medium">Drag & drop your video file here</p>
+                            <p class="text-gray-500 text-sm mt-1">or</p>
+                            <button type="button" id="browseBtn" class="mt-3 px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
+                                Browse Files
+                            </button>
+                            <input type="file" id="fileInput" accept=".mp4,.avi,.mov,.mkv" class="hidden">
+                            <p id="selectedFileName" class="mt-3 text-gray-600 text-sm hidden"></p>
+                        </div>
+
+                        <!-- Language Selection -->
+                        <div>
+                            <label class="block text-gray-700 font-medium mb-2">Select Target Language</label>
+                            <div class="language-dropdown relative">
+                                <button type="button" id="languageDropdownBtn" class="w-full flex justify-between items-center px-4 py-2 border border-gray-300 rounded-md bg-white text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                    <span id="selectedLanguage">Tamil</span>
+                                    <i class="fas fa-chevron-down text-gray-400"></i>
+                                </button>
+                                <div id="languageDropdown" class="hidden dropdown-menu absolute left-0 right-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg">
+                                    <ul id="languagesList" class="py-1">
+                                        <!-- Languages will be populated here -->
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Upload Button -->
+                        <div>
+                            <button type="submit" id="uploadBtn" class="w-full flex justify-center items-center px-6 py-3 bg-indigo-600 text-white font-medium rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:bg-indigo-300 disabled:cursor-not-allowed" disabled>
+                                <i class="fas fa-upload mr-2"></i>
+                                Process Video
+                            </button>
+                        </div>
+                    </form>
+
+                    <!-- Progress Bar (hidden by default) -->
+                    <div id="progressContainer" class="mt-6 hidden">
+                        <p class="text-gray-700 font-medium mb-2">Processing your video...</p>
+                        <div class="progress-bar">
+                            <div id="progressBar" class="progress-bar-fill" style="width: 0%"></div>
+                        </div>
+                        <p id="progressText" class="text-gray-600 text-sm mt-2 text-center">Starting...</p>
+                        <div class="mt-4 flex justify-center">
+                            <div class="loading-spinner"></div>
+                        </div>
+                    </div>
+
+                    <!-- Status Messages -->
+                    <div id="statusMessage" class="mt-4 hidden">
+                        <!-- Messages will appear here -->
+                    </div>
+                </div>
+
+                <!-- Preview Section -->
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h2 class="text-xl font-semibold text-gray-800 mb-4">Preview Transliterated Video</h2>
+                    
+                    <!-- Initial placeholder message -->
+                    <div id="placeholderMessage" class="bg-gray-100 rounded-lg p-8 text-center">
+                        <i class="fas fa-film text-4xl text-gray-400 mb-3"></i>
+                        <p class="text-gray-600">Upload and process a video to see the preview with transliterated subtitles</p>
+                    </div>
+                    
+                    <!-- Video Player with separate subtitle area (hidden initially) -->
+                    <div id="videoWrapper" class="hidden flex flex-col">
+                        <div id="videoContainer" class="video-container">
+                            <video id="player" playsinline controls>
+                                <source id="videoSource" src="" type="video/mp4">
+                                <!-- We'll still load the track for metadata, but display our own subtitles -->
+                                <track id="subtitleTrack" kind="subtitles" label="Transliterated" default>
+                                Your browser does not support the video tag.
+                            </video>
+                        </div>
+                        <!-- Custom subtitle display area below the video -->
+                        <div id="subtitleDisplay" class="subtitle-container">
+                            <div id="subtitlesContent">
+                                <!-- Subtitles will be displayed here -->
+                                <div class="text-gray-400">Subtitles will appear here when video plays</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Download and Share options -->
+                    <div id="downloadOptions" class="mt-6 hidden">
+                        <h3 class="text-lg font-medium text-gray-800 mb-3">Download Options</h3>
+                        <div class="flex flex-wrap gap-3">
+                            <a id="downloadSubtitles" href="#" class="inline-flex items-center px-4 py-2 bg-indigo-100 text-indigo-700 rounded-md hover:bg-indigo-200 transition">
+                                <i class="fas fa-closed-captioning mr-2"></i>
+                                Subtitles (.srt)
+                            </a>
+                            <button id="copyEmbedCode" class="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition">
+                                <i class="fas fa-code mr-2"></i>
+                                Copy Embed Code
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Info Box -->
+                    <div class="mt-6 bg-blue-50 p-4 rounded-lg border border-blue-100">
+                        <h3 class="text-lg font-medium text-blue-800 mb-2 flex items-center">
+                            <i class="fas fa-info-circle mr-2"></i>
+                            Understanding Transliteration
+                        </h3>
+                        <p class="text-blue-700 text-sm">
+                            This tool preserves the original meaning and accent, presenting English speech in regional scripts.
+                            It combines translation (preserving meaning) with transliteration (preserving sound) for an authentic experience.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Features Section -->
+            <div class="mt-12 bg-white p-6 rounded-lg shadow-md">
+                <h2 class="text-xl font-semibold text-gray-800 mb-6">Key Features</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="p-4 bg-indigo-50 rounded-lg border border-indigo-100">
+                        <div class="flex items-center mb-3">
+                            <div class="w-10 h-10 bg-indigo-500 text-white rounded-full flex items-center justify-center mr-3">
+                                <i class="fas fa-language"></i>
+                            </div>
+                            <h3 class="text-lg font-medium text-indigo-800">Meaning Preservation</h3>
+                        </div>
+                        <p class="text-indigo-700 text-sm">
+                            Uses advanced algorithms to preserve both semantic meaning and phonetic essence of the original speech.
+                        </p>
+                    </div>
+                    <div class="p-4 bg-purple-50 rounded-lg border border-purple-100">
+                        <div class="flex items-center mb-3">
+                            <div class="w-10 h-10 bg-purple-500 text-white rounded-full flex items-center justify-center mr-3">
+                                <i class="fas fa-microphone-alt"></i>
+                            </div>
+                            <h3 class="text-lg font-medium text-purple-800">Accent Understanding</h3>
+                        </div>
+                        <p class="text-purple-700 text-sm">
+                            Intelligently processes various English accents and converts them to natural-sounding regional language equivalents.
+                        </p>
+                    </div>
+                    <div class="p-4 bg-blue-50 rounded-lg border border-blue-100">
+                        <div class="flex items-center mb-3">
+                            <div class="w-10 h-10 bg-blue-500 text-white rounded-full flex items-center justify-center mr-3">
+                                <i class="fas fa-globe-asia"></i>
+                            </div>
+                            <h3 class="text-lg font-medium text-blue-800">Multiple Languages</h3>
+                        </div>
+                        <p class="text-blue-700 text-sm">
+                            Supports 11 Indian languages including Hindi, Tamil, Telugu, Malayalam, Kannada, Bengali, and more.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="bg-gray-800 text-white mt-12 py-6">
+            <div class="container mx-auto px-4">
+                <div class="flex flex-col md:flex-row justify-between items-center">
+                    <div class="mb-4 md:mb-0">
+                        <h3 class="text-lg font-medium">AI Video Transliteration Tool</h3>
+                        <p class="text-gray-400 text-sm mt-1">Bridging linguistic barriers through AI</p>
+                    </div>
+                    <div class="flex space-x-4">
+                        <a href="#" class="text-gray-400 hover:text-white">
+                            <i class="fab fa-github"></i>
+                        </a>
+                        <a href="#" class="text-gray-400 hover:text-white">
+                            <i class="fab fa-twitter"></i>
+                        </a>
+                        <a href="#" class="text-gray-400 hover:text-white">
+                            <i class="fas fa-envelope"></i>
+                        </a>
+                    </div>
+                </div>
+                <div class="mt-6 text-center text-gray-400 text-sm">
+                    <p>&copy; 2025 AI Video Transliteration Tool. All rights reserved.</p>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- JavaScript Dependencies -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/plyr/3.7.8/plyr.min.js"></script>
+    
+    <script>
+        // Scroll to main content function
+        function scrollToMain() {
+            document.getElementById('main').scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            // DOM Elements
+            const dropZone = document.getElementById('dropZone');
+            const fileInput = document.getElementById('fileInput');
+            const browseBtn = document.getElementById('browseBtn');
+            const selectedFileName = document.getElementById('selectedFileName');
+            const uploadBtn = document.getElementById('uploadBtn');
+            const uploadForm = document.getElementById('uploadForm');
+            const progressContainer = document.getElementById('progressContainer');
+            const progressBar = document.getElementById('progressBar');
+            const progressText = document.getElementById('progressText');
+            const statusMessage = document.getElementById('statusMessage');
+            const placeholderMessage = document.getElementById('placeholderMessage');
+            const videoWrapper = document.getElementById('videoWrapper');
+            const videoContainer = document.getElementById('videoContainer');
+            const player = document.getElementById('player');
+            const videoSource = document.getElementById('videoSource');
+            const subtitleTrack = document.getElementById('subtitleTrack');
+            const subtitleDisplay = document.getElementById('subtitleDisplay');
+            const subtitlesContent = document.getElementById('subtitlesContent');
+            const downloadOptions = document.getElementById('downloadOptions');
+            const downloadSubtitles = document.getElementById('downloadSubtitles');
+            const copyEmbedCode = document.getElementById('copyEmbedCode');
+            const languageDropdownBtn = document.getElementById('languageDropdownBtn');
+            const languageDropdown = document.getElementById('languageDropdown');
+            const languagesList = document.getElementById('languagesList');
+            const selectedLanguage = document.getElementById('selectedLanguage');
+            
+            // Initialize Plyr video player
+            let videoPlayer = null;
+            
+            // File handling variables
+            let selectedFile = null;
+            
+            // Subtitle data storage
+            let subtitles = [];
+            
+            // Initialize languages
+            let availableLanguages = ["Hindi", "Tamil", "Telugu", "Malayalam", "Kannada", "Bengali", 
+                                     "Marathi", "Punjabi", "Gujarati", "Odia", "Assamese"];
+            
+            // Populate languages dropdown with the available languages
+            languagesList.innerHTML = '';
+            availableLanguages.forEach(lang => {
+                const li = document.createElement('li');
+                li.innerHTML = `<a href="#" class="block px-4 py-2 text-gray-700 hover:bg-indigo-50">${lang}</a>`;
+                li.querySelector('a').addEventListener('click', function(e) {
+                    e.preventDefault();
+                    selectedLanguage.textContent = lang;
+                    languageDropdown.classList.add('hidden');
+                });
+                languagesList.appendChild(li);
+            });
+            
+            // Toggle language dropdown
+            languageDropdownBtn.addEventListener('click', function() {
+                languageDropdown.classList.toggle('hidden');
+            });
+            
+            // Close dropdown when clicking outside
+            document.addEventListener('click', function(e) {
+                if (!languageDropdownBtn.contains(e.target) && !languageDropdown.contains(e.target)) {
+                    languageDropdown.classList.add('hidden');
+                }
+            });
+            
+            // File input handling
+            browseBtn.addEventListener('click', function() {
+                fileInput.click();
+            });
+            
+            fileInput.addEventListener('change', function() {
+                handleFileSelection(this.files);
+            });
+            
+            // Drag and drop functionality
+            dropZone.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                this.classList.add('dragover');
+            });
+            
+            dropZone.addEventListener('dragleave', function() {
+                this.classList.remove('dragover');
+            });
+            
+            dropZone.addEventListener('drop', function(e) {
+                e.preventDefault();
+                this.classList.remove('dragover');
+                handleFileSelection(e.dataTransfer.files);
+            });
+            
+            function handleFileSelection(files) {
+                if (files.length === 0) return;
+                
+                const file = files[0];
+                const allowedTypes = ['.mp4', '.avi', '.mov', '.mkv'];
+                const fileExt = '.' + file.name.split('.').pop().toLowerCase();
+                
+                if (!allowedTypes.includes(fileExt)) {
+                    showToast('Please select a valid video file (.mp4, .avi, .mov, .mkv)', 'error');
+                    return;
+                }
+                
+                selectedFile = file;
+                selectedFileName.textContent = file.name;
+                selectedFileName.classList.remove('hidden');
+                uploadBtn.disabled = false;
+                
+                // Reset UI
+                resetPreviewSection();
+            }
+            
+            // Function to parse SRT subtitles
+            function parseSRT(srtContent) {
+                const srtData = [];
+                const srtChunks = srtContent.trim().split('\n\n');
+                
+                for (const chunk of srtChunks) {
+                    const lines = chunk.split('\n');
+                    if (lines.length < 3) continue;
+                    
+                    const index = parseInt(lines[0].trim());
+                    const timeParts = lines[1].split(' --> ');
+                    if (timeParts.length !== 2) continue;
+                    
+                    const startTime = parseTimeString(timeParts[0].trim());
+                    const endTime = parseTimeString(timeParts[1].trim());
+                    
+const textLines = lines.slice(2);
+const text = textLines.join('\n');
+                    
+srtData.push({
+    index: index,
+    startTime: startTime,
+    endTime: endTime,
+    text: text
+});
+}
+                
+return srtData;
+}
+            
+// Function to parse SRT time string to seconds
+function parseTimeString(timeString) {
+    const parts = timeString.split(':');
+    const seconds = parseFloat(parts[2].replace(',', '.'));
+    const minutes = parseInt(parts[1]);
+    const hours = parseInt(parts[0]);
+                
+    return hours * 3600 + minutes * 60 + seconds;
+}
+            
+// Form submission
+uploadForm.addEventListener('submit', function(e) {
+    e.preventDefault();
+                
+    if (!selectedFile) {
+        showToast('Please select a video file first', 'error');
+        return;
+    }
+                
+    // Show progress
+    uploadBtn.disabled = true;
+    progressContainer.classList.remove('hidden');
+    statusMessage.classList.add('hidden');
+    progressBar.style.width = '0%';
+    progressText.textContent = 'Uploading...';
+                
+    const formData = new FormData();
+    formData.append('file', selectedFile);
+    formData.append('language', selectedLanguage.textContent);
+                
+    // Simulate file upload with progress
+    let progress = 0;
+    const progressInterval = setInterval(function() {
+        progress += 5;
+        if (progress > 95) {
+            clearInterval(progressInterval);
+        }
+        progressBar.style.width = progress + '%';
+        progressText.textContent = `Processing... ${progress}%`;
+    }, 500);
+                
+    // Send to server
+    fetch('/test/upload', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        clearInterval(progressInterval);
+        progressBar.style.width = '100%';
+        progressText.textContent = 'Processing complete!';
+                    
+        if (data.error) {
+            showToast(data.error, 'error');
+            setTimeout(() => {
+                progressContainer.classList.add('hidden');
+                uploadBtn.disabled = false;
+            }, 2000);
+            return;
+        }
+                    
+        // Success! Show video with subtitles
+        showTransliteratedVideo(data);
+    })
+    .catch(error => {
+        clearInterval(progressInterval);
+        progressBar.style.width = '0%';
+        progressText.textContent = 'Error occurred';
+        showToast('An error occurred during processing', 'error');
+        uploadBtn.disabled = false;
+        console.error('Error:', error);
+    });
+});
+            
+function showTransliteratedVideo(data) {
+    // Update UI to show video player
+    placeholderMessage.classList.add('hidden');
+    videoWrapper.classList.remove('hidden');
+    downloadOptions.classList.remove('hidden');
+                
+    // Set video source
+    videoSource.src = `/static/${data.video}`;
+    subtitleTrack.src = `/test/get-subtitles?file=${data.vtt}`;
+                
+    // Set download link
+    downloadSubtitles.href = `/test/get-subtitles?file=${data.subtitle}&download=1`;
+                
+    // Initialize video player or reset it if already exists
+    if (videoPlayer) {
+        videoPlayer.destroy();
+    }
+                
+    videoPlayer = new Plyr('#player', {
+        captions: { active: true, language: 'en', update: true }
+    });
+                
+    // Load subtitle content for custom display
+    fetch(`/test/get-subtitles?file=${data.vtt}`)
+    .then(response => response.text())
+    .then(subtitleContent => {
+        // Parse VTT content
+        const subtitleLines = subtitleContent.split('\n');
+        subtitles = [];
+                    
+        let currentSubtitle = null;
+        let inCue = false;
+                    
+        for (let i = 0; i < subtitleLines.length; i++) {
+            const line = subtitleLines[i].trim();
+                        
+            if (line === 'WEBVTT') continue;
+            if (line === '') continue;
+                        
+            // Check for timestamp line
+            if (line.includes(' --> ')) {
+                inCue = true;
+                const timeparts = line.split(' --> ');
+                const startTime = parseVttTime(timeparts[0]);
+                const endTime = parseVttTime(timeparts[1]);
+                            
+                currentSubtitle = { start: startTime, end: endTime, text: '' };
+                continue;
+            }
+                        
+            if (inCue && line !== '') {
+                if (currentSubtitle.text) {
+                    currentSubtitle.text += '\n' + line;
+                } else {
+                    currentSubtitle.text = line;
+                }
+                            
+                // Check if next line is blank or timestamp (end of cue)
+                if (i + 1 >= subtitleLines.length || 
+                    subtitleLines[i + 1].trim() === '' ||
+                    subtitleLines[i + 1].includes(' --> ')) {
+                    subtitles.push(currentSubtitle);
+                    inCue = false;
+                }
+            }
+        }
+                    
+        // Set up event listener for showing subtitles
+        player.addEventListener('timeupdate', updateSubtitles);
+    });
+                
+    // Display toast notification
+    showToast(`Video processed successfully in ${data.language}!`, 'success');
+                
+    // Scroll to video
+    videoContainer.scrollIntoView({ behavior: 'smooth' });
+}
+            
+function parseVttTime(timeString) {
+    // Handle both comma and dot format
+    timeString = timeString.replace(',', '.');
+    const parts = timeString.split(':');
+    const seconds = parseFloat(parts[2]);
+    const minutes = parseInt(parts[1]);
+    const hours = parseInt(parts[0]);
+                
+    return hours * 3600 + minutes * 60 + seconds;
+}
+            
+function updateSubtitles() {
+    const currentTime = player.currentTime;
+    subtitlesContent.innerHTML = '';
+                
+    // Find all relevant subtitles (could be multiple)
+    let hasActiveSubtitle = false;
+    subtitles.forEach((subtitle, index) => {
+        if (currentTime >= subtitle.start && currentTime <= subtitle.end) {
+            const subtitleEl = document.createElement('div');
+            subtitleEl.className = 'subtitle-entry active';
+            subtitleEl.textContent = subtitle.text;
+            subtitlesContent.appendChild(subtitleEl);
+            hasActiveSubtitle = true;
+        }
+    });
+                
+    // Show a placeholder if no active subtitles
+    if (!hasActiveSubtitle) {
+        subtitlesContent.innerHTML = '<div class="text-gray-400">No active subtitles at this time</div>';
+    }
+}
+            
+function resetPreviewSection() {
+    // Reset the video player section
+    if (videoPlayer) {
+        videoPlayer.destroy();
+        videoPlayer = null;
+    }
+                
+    placeholderMessage.classList.remove('hidden');
+    videoWrapper.classList.add('hidden');
+    downloadOptions.classList.add('hidden');
+    subtitlesContent.innerHTML = '<div class="text-gray-400">Subtitles will appear here when video plays</div>';
+}
+            
+// Function to show toast notifications
+function showToast(message, type) {
+    const toastContainer = document.getElementById('toastContainer');
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    toast.innerHTML = `
+        <div class="flex items-center">
+        <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'} mr-2"></i>
+        <span>${message}</span>
+        </div>
+    `;
+                
+    toastContainer.appendChild(toast);
+                
+    // Auto remove after 3 seconds
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => {
+            toast.remove();
+        }, 300);
+    }, 3000);
+}
+            
+// Copy embed code functionality
+copyEmbedCode.addEventListener('click', function() {
+    if (!videoSource.src) return;
+                
+    const videPath = videoSource.src;
+    const subsPath = subtitleTrack.src;
+    const embedCode = `<video width="640" height="360" controls>
+    <source src="${videPath}" type="video/mp4">
+    <track src="${subsPath}" kind="subtitles" label="Transliterated" default>
+    Your browser does not support the video tag.
+</video>`;
+                
+    navigator.clipboard.writeText(embedCode).then(() => {
+        showToast('Embed code copied to clipboard!', 'success');
+    });
+});
+        });
+    </script>
+
+    <!-- Plyr Initialization Script -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Plyr will be initialized when needed
+        });
+    </script>
+</body>
+</html>
